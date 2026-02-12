@@ -308,7 +308,7 @@ If you find a bug, want to suggest a feature, or contribute:
 - 🐛 Issues: [GitHub Issues](https://github.com/Ayushman-S-ingh/crop-disease-monitoring-app/issues)
 - 💬 Discussions: Coming Soon
 - 📘 Contribution Guide: See [CONTRIBUTING.md](CONTRIBUTING.md)
-
+🛠 Developer Setup Guide: See [SETUP.md](SETUP.md)
 ---
 
 > 🚧 This project is under active development. APIs and features may change.
