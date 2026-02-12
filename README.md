@@ -178,8 +178,9 @@ crop-disease-monitoring-app/
   "confidence": 92.4,
   "suggestion": "Apply appropriate fungicide and remove infected leaves."
 }
+```
 
----
+
 
 ## 🧪 Machine Learning Approach
 
@@ -222,6 +223,8 @@ To maintain clean and scalable development:
 - `main` → Production-ready stable code  
 - `dev` → Development branch  
 - `feature/*` → Individual feature branches  
+
+
 
 ### 🔁 Development Process
 1. Create a feature branch from `dev`
