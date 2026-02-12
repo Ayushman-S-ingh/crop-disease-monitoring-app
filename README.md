@@ -36,7 +36,7 @@ This project aims to:
 
 ### 🔄 High-Level Flow
 
-
+```
 +----------------------+
 | User (Mobile/Web) |
 +----------------------+
@@ -63,7 +63,7 @@ v
 +----------------------+
 | Prediction Result |
 +----------------------+
-
+```
 
 ---
 
@@ -94,7 +94,7 @@ v
 ---
 
 ## 📂 Project Structure
-
+```
 crop-disease-monitoring-app/
 │
 ├── frontend/
@@ -118,7 +118,7 @@ crop-disease-monitoring-app/
 ├── README.md
 ├── requirements.txt
 └── .gitignore
-
+```
 
 ---
 
