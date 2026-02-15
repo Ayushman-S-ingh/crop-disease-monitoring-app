@@ -1,5 +1,6 @@
 import os
 import tensorflow as tf
+import json
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.applications import MobileNetV2
 from tensorflow.keras import layers, models
@@ -130,6 +131,9 @@ history = model.fit(
     validation_steps=len(val_generator)
 )
 
+class_indices = train_generator.class_indices
+with open("ml_model/saved_model/class_indices.json", "w") as f:
+    json.dump(class_indices, f)
 
 # ========================
 # Evaluation
