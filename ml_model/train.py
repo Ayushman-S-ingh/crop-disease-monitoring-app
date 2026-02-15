@@ -1,58 +1,130 @@
 import os
-import random
-import shutil
+import tensorflow as tf
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.applications import MobileNetV2
+from tensorflow.keras import layers, models
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, CSVLogger
 
-# Paths
+# ========================
+# Configuration
+# ========================
+
 BASE_DIR = "ml_model/dataset"
-SOURCE_DIR = os.path.join(BASE_DIR, "PlantVillage")
 TRAIN_DIR = os.path.join(BASE_DIR, "train")
 VAL_DIR = os.path.join(BASE_DIR, "validation")
+MODEL_SAVE_PATH = "ml_model/best_model.h5"
+LOG_PATH = "ml_model/training_log.csv"
 
-SPLIT_RATIO = 0.8  # 80% train, 20% validation
+IMG_SIZE = (224, 224)
+BATCH_SIZE = 32
+EPOCHS = 8
 
+print("\nInitializing data generators...")
 
-def create_dir(path):
-    if not os.path.exists(path):
-        os.makedirs(path)
+# ========================
+# Data Generators
+# ========================
 
+train_datagen = ImageDataGenerator(
+    rescale=1./255,
+    rotation_range=20,
+    zoom_range=0.2,
+    horizontal_flip=True
+)
 
-def split_dataset():
-    print("Starting dataset split...")
+val_datagen = ImageDataGenerator(rescale=1./255)
 
-    for class_name in os.listdir(SOURCE_DIR):
-        class_path = os.path.join(SOURCE_DIR, class_name)
+train_generator = train_datagen.flow_from_directory(
+    TRAIN_DIR,
+    target_size=IMG_SIZE,
+    batch_size=BATCH_SIZE,
+    class_mode='categorical'
+)
 
-        if not os.path.isdir(class_path):
-            continue
+val_generator = val_datagen.flow_from_directory(
+    VAL_DIR,
+    target_size=IMG_SIZE,
+    batch_size=BATCH_SIZE,
+    class_mode='categorical'
+)
 
-        images = os.listdir(class_path)
-        random.shuffle(images)
+num_classes = train_generator.num_classes
+print(f"Number of classes: {num_classes}")
 
-        split_index = int(len(images) * SPLIT_RATIO)
+# ========================
+# Transfer Learning Model
+# ========================
 
-        train_images = images[:split_index]
-        val_images = images[split_index:]
+print("Loading MobileNetV2 base model...")
 
-        # Create class folders
-        create_dir(os.path.join(TRAIN_DIR, class_name))
-        create_dir(os.path.join(VAL_DIR, class_name))
+base_model = MobileNetV2(
+    weights="imagenet",
+    include_top=False,
+    input_shape=(224, 224, 3)
+)
 
-        # Copy training images
-        for img in train_images:
-            src = os.path.join(class_path, img)
-            dst = os.path.join(TRAIN_DIR, class_name, img)
-            shutil.copy2(src, dst)
+base_model.trainable = False  # Freeze base
 
-        # Copy validation images
-        for img in val_images:
-            src = os.path.join(class_path, img)
-            dst = os.path.join(VAL_DIR, class_name, img)
-            shutil.copy2(src, dst)
+model = models.Sequential([
+    base_model,
+    layers.GlobalAveragePooling2D(),
+    layers.Dense(128, activation="relu"),
+    layers.Dropout(0.5),
+    layers.Dense(num_classes, activation="softmax")
+])
 
-        print(f"{class_name}: {len(train_images)} train | {len(val_images)} validation")
+model.compile(
+    optimizer="adam",
+    loss="categorical_crossentropy",
+    metrics=["accuracy"]
+)
 
-    print("Dataset split completed.")
+model.summary()
 
+# ========================
+# Callbacks
+# ========================
 
-if __name__ == "__main__":
-    split_dataset()
+callbacks = [
+    EarlyStopping(
+        monitor="val_loss",
+        patience=3,
+        restore_best_weights=True
+    ),
+    ModelCheckpoint(
+        MODEL_SAVE_PATH,
+        monitor="val_accuracy",
+        save_best_only=True,
+        verbose=1
+    ),
+    ReduceLROnPlateau(
+        monitor="val_loss",
+        factor=0.2,
+        patience=2,
+        verbose=1
+    ),
+    CSVLogger(LOG_PATH)
+]
+
+# ========================
+# Training
+# ========================
+
+print("\nStarting training...")
+
+history = model.fit(
+    train_generator,
+    validation_data=val_generator,
+    epochs=EPOCHS,
+    callbacks=callbacks
+)
+
+# ========================
+# Evaluation
+# ========================
+
+print("\nEvaluating model...")
+
+val_loss, val_accuracy = model.evaluate(val_generator)
+
+print(f"\nFinal Validation Accuracy: {val_accuracy * 100:.2f}%")
