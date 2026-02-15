@@ -211,3 +211,4 @@ __marimo__/
 ml_model/dataset/*
 !ml_model/dataset/.gitkeep
 
+*.zip
