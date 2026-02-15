@@ -1,31 +1,38 @@
 import os
 import tensorflow as tf
-from tensorflow.keras import layers, models
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.applications import MobileNetV2
-from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
+from tensorflow.keras import layers, models
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, CSVLogger
 
-# Paths
+# ========================
+# Configuration
+# ========================
+
 BASE_DIR = "ml_model/dataset"
 TRAIN_DIR = os.path.join(BASE_DIR, "train")
 VAL_DIR = os.path.join(BASE_DIR, "validation")
+MODEL_SAVE_PATH = "ml_model/best_model.h5"
+LOG_PATH = "ml_model/training_log.csv"
 
 IMG_SIZE = (224, 224)
 BATCH_SIZE = 32
+EPOCHS = 8
 
-print("Initializing data generators...")
+print("\nInitializing data generators...")
 
-# Data Generators with preprocessing for MobileNet
+# ========================
+# Data Generators
+# ========================
+
 train_datagen = ImageDataGenerator(
-    preprocessing_function=preprocess_input,
+    rescale=1./255,
     rotation_range=20,
     zoom_range=0.2,
     horizontal_flip=True
 )
 
-val_datagen = ImageDataGenerator(
-    preprocessing_function=preprocess_input
-)
+val_datagen = ImageDataGenerator(rescale=1./255)
 
 train_generator = train_datagen.flow_from_directory(
     TRAIN_DIR,
@@ -44,35 +51,80 @@ val_generator = val_datagen.flow_from_directory(
 num_classes = train_generator.num_classes
 print(f"Number of classes: {num_classes}")
 
-# Load Pretrained MobileNetV2
+# ========================
+# Transfer Learning Model
+# ========================
+
 print("Loading MobileNetV2 base model...")
 
 base_model = MobileNetV2(
-    input_shape=(224, 224, 3),
+    weights="imagenet",
     include_top=False,
-    weights='imagenet'
+    input_shape=(224, 224, 3)
 )
 
-# Freeze base model
-base_model.trainable = False
+base_model.trainable = False  # Freeze base
 
-# Add custom classification head
 model = models.Sequential([
     base_model,
     layers.GlobalAveragePooling2D(),
-    layers.Dense(128, activation='relu'),
+    layers.Dense(128, activation="relu"),
     layers.Dropout(0.5),
-    layers.Dense(num_classes, activation='softmax')
+    layers.Dense(num_classes, activation="softmax")
 ])
 
-# Compile model
 model.compile(
-    optimizer='adam',
-    loss='categorical_crossentropy',
-    metrics=['accuracy']
+    optimizer="adam",
+    loss="categorical_crossentropy",
+    metrics=["accuracy"]
 )
 
-# Print model summary
 model.summary()
 
-print("Transfer learning model built successfully.")
+# ========================
+# Callbacks
+# ========================
+
+callbacks = [
+    EarlyStopping(
+        monitor="val_loss",
+        patience=3,
+        restore_best_weights=True
+    ),
+    ModelCheckpoint(
+        MODEL_SAVE_PATH,
+        monitor="val_accuracy",
+        save_best_only=True,
+        verbose=1
+    ),
+    ReduceLROnPlateau(
+        monitor="val_loss",
+        factor=0.2,
+        patience=2,
+        verbose=1
+    ),
+    CSVLogger(LOG_PATH)
+]
+
+# ========================
+# Training
+# ========================
+
+print("\nStarting training...")
+
+history = model.fit(
+    train_generator,
+    validation_data=val_generator,
+    epochs=EPOCHS,
+    callbacks=callbacks
+)
+
+# ========================
+# Evaluation
+# ========================
+
+print("\nEvaluating model...")
+
+val_loss, val_accuracy = model.evaluate(val_generator)
+
+print(f"\nFinal Validation Accuracy: {val_accuracy * 100:.2f}%")
