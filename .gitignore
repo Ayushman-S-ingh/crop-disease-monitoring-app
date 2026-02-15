@@ -212,3 +212,14 @@ ml_model/dataset/*
 !ml_model/dataset/.gitkeep
 
 *.zip
+
+# Ignore dataset
+ml_model/dataset/
+
+# Ignore trained models
+ml_model/*.h5
+ml_model/*.keras
+
+# Ignore training logs
+ml_model/*.csv
+
