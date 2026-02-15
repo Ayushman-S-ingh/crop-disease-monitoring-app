@@ -206,20 +206,20 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
+# ========================
+# ML Project Specific
+# ========================
 
-# Ignore dataset images
-ml_model/dataset/*
-!ml_model/dataset/.gitkeep
-
-*.zip
-
-# Ignore dataset
+# Dataset
 ml_model/dataset/
 
-# Ignore trained models
+# Saved models
+ml_model/saved_model/
 ml_model/*.h5
 ml_model/*.keras
 
-# Ignore training logs
+# Training logs
 ml_model/*.csv
 
+# Zipped datasets
+*.zip
