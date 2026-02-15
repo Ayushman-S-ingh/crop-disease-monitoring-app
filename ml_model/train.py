@@ -1,58 +1,49 @@
 import os
-import random
-import shutil
+import tensorflow as tf
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 # Paths
 BASE_DIR = "ml_model/dataset"
-SOURCE_DIR = os.path.join(BASE_DIR, "PlantVillage")
 TRAIN_DIR = os.path.join(BASE_DIR, "train")
 VAL_DIR = os.path.join(BASE_DIR, "validation")
 
-SPLIT_RATIO = 0.8  # 80% train, 20% validation
+IMG_SIZE = (224, 224)
+BATCH_SIZE = 32
 
+def main():
+    print("Initializing data preprocessing pipeline...")
 
-def create_dir(path):
-    if not os.path.exists(path):
-        os.makedirs(path)
+    # Training Data Generator with Augmentation
+    train_datagen = ImageDataGenerator(
+        rescale=1.0 / 255,
+        rotation_range=20,
+        zoom_range=0.2,
+        shear_range=0.2,
+        horizontal_flip=True,
+        fill_mode="nearest"
+    )
 
+    # Validation Data Generator (NO augmentation)
+    val_datagen = ImageDataGenerator(rescale=1.0 / 255)
 
-def split_dataset():
-    print("Starting dataset split...")
+    train_generator = train_datagen.flow_from_directory(
+        TRAIN_DIR,
+        target_size=IMG_SIZE,
+        batch_size=BATCH_SIZE,
+        class_mode="categorical"
+    )
 
-    for class_name in os.listdir(SOURCE_DIR):
-        class_path = os.path.join(SOURCE_DIR, class_name)
+    val_generator = val_datagen.flow_from_directory(
+        VAL_DIR,
+        target_size=IMG_SIZE,
+        batch_size=BATCH_SIZE,
+        class_mode="categorical"
+    )
 
-        if not os.path.isdir(class_path):
-            continue
-
-        images = os.listdir(class_path)
-        random.shuffle(images)
-
-        split_index = int(len(images) * SPLIT_RATIO)
-
-        train_images = images[:split_index]
-        val_images = images[split_index:]
-
-        # Create class folders
-        create_dir(os.path.join(TRAIN_DIR, class_name))
-        create_dir(os.path.join(VAL_DIR, class_name))
-
-        # Copy training images
-        for img in train_images:
-            src = os.path.join(class_path, img)
-            dst = os.path.join(TRAIN_DIR, class_name, img)
-            shutil.copy2(src, dst)
-
-        # Copy validation images
-        for img in val_images:
-            src = os.path.join(class_path, img)
-            dst = os.path.join(VAL_DIR, class_name, img)
-            shutil.copy2(src, dst)
-
-        print(f"{class_name}: {len(train_images)} train | {len(val_images)} validation")
-
-    print("Dataset split completed.")
-
+    print("\nData preprocessing setup complete.")
+    print(f"Found {train_generator.samples} training images.")
+    print(f"Found {val_generator.samples} validation images.")
+    print(f"Number of classes: {len(train_generator.class_indices)}")
 
 if __name__ == "__main__":
-    split_dataset()
+    main()
