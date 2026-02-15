@@ -3,7 +3,12 @@ import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.applications import MobileNetV2
 from tensorflow.keras import layers, models
-from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, CSVLogger
+from tensorflow.keras.callbacks import (
+    EarlyStopping,
+    ModelCheckpoint,
+    ReduceLROnPlateau,
+    CSVLogger,
+)
 
 # ========================
 # Configuration
@@ -21,9 +26,7 @@ IMG_SIZE = (224, 224)
 BATCH_SIZE = 32
 EPOCHS = 8
 
-# Create save directory if not exists
-if not os.path.exists(SAVE_DIR):
-    os.makedirs(SAVE_DIR)
+os.makedirs(SAVE_DIR, exist_ok=True)
 
 print("\nInitializing data generators...")
 
@@ -61,7 +64,7 @@ print(f"Number of classes: {num_classes}")
 # Transfer Learning Model
 # ========================
 
-print("Loading MobileNetV2 base model...")
+print("\nLoading MobileNetV2 base model...")
 
 base_model = MobileNetV2(
     weights="imagenet",
@@ -80,7 +83,7 @@ model = models.Sequential([
 ])
 
 model.compile(
-    optimizer="adam",
+    optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
     loss="categorical_crossentropy",
     metrics=["accuracy"]
 )
@@ -122,8 +125,11 @@ history = model.fit(
     train_generator,
     validation_data=val_generator,
     epochs=EPOCHS,
-    callbacks=callbacks
+    callbacks=callbacks,
+    steps_per_epoch=len(train_generator),
+    validation_steps=len(val_generator)
 )
+
 
 # ========================
 # Evaluation
@@ -136,20 +142,10 @@ val_loss, val_accuracy = model.evaluate(val_generator)
 print(f"\nFinal Validation Accuracy: {val_accuracy * 100:.2f}%")
 
 # ========================
-# Save Final Model (Extra Safety)
+# Verify Model Loading
 # ========================
 
-print("\nSaving trained model...")
-model.save(MODEL_PATH)
-
-print(f"Model saved at: {MODEL_PATH}")
-
-# ========================
-# Verify Loading
-# ========================
-
-print("Verifying saved model...")
+print("\nVerifying saved model...")
 
 loaded_model = tf.keras.models.load_model(MODEL_PATH)
-
 print("Model loaded successfully.")
